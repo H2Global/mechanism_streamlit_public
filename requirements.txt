@@ -1,11 +1,6 @@
 streamlit
 pandas
 plotly
-profin
 pymechanism
 scipy
-yfinance
 matplotlib
-CoolProp
-openpyxl
--e .
