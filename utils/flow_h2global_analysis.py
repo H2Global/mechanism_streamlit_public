@@ -369,6 +369,8 @@ def show_evaluation_page():
     VIS_3=st.checkbox(label="Mitigated CO2-emissions [tons]")
     VIS_4=st.checkbox(label="Required electrolyzer capacity [GW]")
     VIS_5=st.checkbox(label="Visualize net-present value of fiscal benefits to the state [US$]")
+    VIS_6=st.checkbox(label="Visualize fiscal cashflows [US$]")
+    
     
     if st.button("Confirm selection"):   
     
@@ -691,7 +693,7 @@ def show_evaluation_page():
                         2) Electrolyzer efficiency: 70% [4]
                                                                                  """)
         
-        if VIS_5:
+        if VIS_5 or VIS_6:
             
             FISCAL_NPV, FISCAL_CASHFLOWS_DICT = get_fiscal_npv(
                     PRODUCT_TYPE=Derivative,
@@ -724,49 +726,84 @@ def show_evaluation_page():
                     VAT_RATE_FERTILIZER=VAT_RATE_FERTILIZER
                     )
             
-            # Convert dictionary to lists for Plotly
-            categories = list(FISCAL_CASHFLOWS_DICT.keys())
-            
-            FISCAL_CASHFLOWS_DICT_DEPRECIATED = {}
-            for c in categories:
-                CASHFLOW_DEPRECIATED_TEMP = 0
-                FISCAL_CASHFLOWS_TEMP = FISCAL_CASHFLOWS_DICT[c]
-                if isinstance(FISCAL_CASHFLOWS_TEMP, (int, float)):
-                    FISCAL_CASHFLOWS_DICT_DEPRECIATED[c] = FISCAL_CASHFLOWS_TEMP
-                    continue
-                else:
-                    for t in range(DEPRECIATION_PERIOD):
-                        CASHFLOW_DEPRECIATED_TEMP += FISCAL_CASHFLOWS_TEMP[t] / (1+WACC)**t
-
-                FISCAL_CASHFLOWS_DICT_DEPRECIATED[c] = CASHFLOW_DEPRECIATED_TEMP
-            
-            #Extract keys and values from dict for visualization
-            categories_vis = list(FISCAL_CASHFLOWS_DICT_DEPRECIATED.keys())
-            values_vis = list(FISCAL_CASHFLOWS_DICT_DEPRECIATED.values())
-            
-            # Create a Plotly Express bar chart
-            fig5 = px.bar(
-                x=categories_vis,
-                y=values_vis,
-                labels={'y': 'Cashflow [US$]'},
-                title="Depreciated Cashflow [US$]",
-                text=values_vis  # Display float values on bars
-            )
-            
-            # Customize the bar chart
-            fig5.update_traces(texttemplate='%{text:.2f}', textposition='outside')  # Format text to 2 decimals
-            fig5.update_layout(yaxis=dict(title="Values"), xaxis=dict(title="Categories"))
-            
-            # Display the chart in Streamlit
-            st.plotly_chart(fig5)         
-            
-            st.write(
-                "Net-present value of funding instrument for fiscal authority:", 
-                round(FISCAL_NPV*1e-6, 2), 
-                "[Million US$]"
+            if VIS_5:
+                # Convert dictionary to lists for Plotly
+                categories = list(FISCAL_CASHFLOWS_DICT.keys())
+                
+                FISCAL_CASHFLOWS_DICT_DEPRECIATED = {}
+                for c in categories:
+                    CASHFLOW_DEPRECIATED_TEMP = 0
+                    FISCAL_CASHFLOWS_TEMP = FISCAL_CASHFLOWS_DICT[c]
+                    if isinstance(FISCAL_CASHFLOWS_TEMP, (int, float)):
+                        FISCAL_CASHFLOWS_DICT_DEPRECIATED[c] = FISCAL_CASHFLOWS_TEMP
+                        continue
+                    else:
+                        for t in range(DEPRECIATION_PERIOD):
+                            CASHFLOW_DEPRECIATED_TEMP += FISCAL_CASHFLOWS_TEMP[t] / (1+WACC)**t
+    
+                    FISCAL_CASHFLOWS_DICT_DEPRECIATED[c] = CASHFLOW_DEPRECIATED_TEMP
+                
+                #Extract keys and values from dict for visualization
+                categories_vis = list(FISCAL_CASHFLOWS_DICT_DEPRECIATED.keys())
+                values_vis = list(FISCAL_CASHFLOWS_DICT_DEPRECIATED.values())
+                
+                # Create a Plotly Express bar chart
+                fig5 = px.bar(
+                    x=categories_vis,
+                    y=values_vis,
+                    labels={'y': 'Cashflow [US$]'},
+                    title="Depreciated Cashflow [US$]",
+                    text=values_vis  # Display float values on bars
                 )
-            
-            
+                
+                # Customize the bar chart
+                fig5.update_traces(texttemplate='%{text:.2f}', textposition='outside')  # Format text to 2 decimals
+                fig5.update_layout(yaxis=dict(title="Values"), xaxis=dict(title="Categories"))
+                
+                # Display the chart in Streamlit
+                st.plotly_chart(fig5)         
+                
+                st.write(
+                    "Net-present value of funding instrument for fiscal authority:", 
+                    round(FISCAL_NPV*1e-6, 2), 
+                    "[Million US$]"
+                    )
+    
+            if VIS_6:
+                
+                fig6 = go.Figure()
+                
+                #Plot hydrogen purchases
+                data_to_plot_long = pd.DataFrame(
+                    {
+                       "Year": range(1,DEPRECIATION_PERIOD+1)
+                       }
+                    )
+                                
+                categories = list(FISCAL_CASHFLOWS_DICT.keys())
+                for c in categories:
+                    #Adding data
+                    data_to_plot_long[c] = FISCAL_CASHFLOWS_DICT[c]                    
+                
+                    #Add bar for Hydrogen Purchases from Funding with error bars
+                    fig6.add_trace(go.Bar(
+                        x=data_to_plot_long['Year'],
+                        y=data_to_plot_long[c],
+                        name=c
+                        )
+                    )
+        
+                # Update layout to stack bars
+                fig6.update_layout(
+                    title="Absolute fiscal cashflows [US$]",
+                    barmode='stack',  # Stack bars
+                    xaxis_title='Year',
+                    yaxis_title="Cashflow [US$]",
+                )
+                
+                # Render the Plotly chart in Streamlit
+                st.plotly_chart(fig6, use_container_width=True)
+               
             
 def get_fiscal_npv(
         PRODUCT_TYPE,
@@ -808,7 +845,7 @@ def get_fiscal_npv(
         ANNUAL_PRODUCTION = np.concatenate([ANNUAL_PRODUCTION, np.full(delta_years, ANNUAL_PRODUCTION.iloc[-1])]) #kg
         ANNUAL_PRODUCT_PURCHASES = np.concatenate([ANNUAL_PRODUCT_PURCHASES, np.full(delta_years, ANNUAL_PRODUCT_PURCHASES.iloc[-1])]) #USD
         ANNUAL_PRODUCT_SALES = np.concatenate([ANNUAL_PRODUCT_SALES, np.zeros(delta_years)]) #USD
-        ANNUAL_FUNDING = np.concatenate([ANNUAL_FUNDING, np.zeros(delta_years)]) #USD
+        ANNUAL_FUNDING_LONG = np.concatenate([ANNUAL_FUNDING, np.zeros(delta_years)]) #USD
         
     #Calculate fiscal benefits. (tax revenues)
     #____CORPORATE_TAX: Only include supply side, because these will be genuinely new businesses.
@@ -890,8 +927,7 @@ def get_fiscal_npv(
 
     
     #Calculate fiscal expenses. (Cashflows to Hintco)
-    FISCAL_EXPENSES = ANNUAL_FUNDING
-        
+    FISCAL_EXPENSES = ANNUAL_FUNDING_LONG
 
     #Calculate NPV
     RELEVANT_CASHFLOWS = (
