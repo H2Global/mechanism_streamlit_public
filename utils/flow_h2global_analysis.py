@@ -177,7 +177,7 @@ def show_evaluation_page():
         #Depreciation period of fiscal loan
         WACC_PERCENT = st.number_input(
             'Cost of Capital [%]',
-            value = 3.0,
+            value = 2.5,
             step=1.0,
             min_value=0.0,
             )
@@ -187,7 +187,7 @@ def show_evaluation_page():
         #____Only consider corporate tax on revenue of production projects.
         CORPORATE_TAX_RATE_PERCENT = st.number_input(
             'Corporate tax rate [%]',
-            value = 20,
+            value = 35,
             step=1,
             min_value=0,
             )
@@ -201,59 +201,26 @@ def show_evaluation_page():
         #____4) Final product: Direct reduced iron (DRI)
         #____5) Final product: Fertilizer
         #____6) VAT on domestically sold hydrogen or ammonia
-        VAT_RATE_INVEST_PERCENT = st.number_input(
-            'VAT rate on investments [%]',
-            value = 10.0,
+        VAT_RATE_PERCENT = st.number_input(
+            'VAT rate [%]',
+            value = 19.0,
             step=1.0,
             min_value=0.0,
             )
-        VAT_RATE_INVEST = VAT_RATE_INVEST_PERCENT / 100
+        VAT_RATE = VAT_RATE_PERCENT / 100
         
-        VAT_RATE_HPA_PERCENT = st.number_input(
-            'VAT rate on HPA [%]',
-            value = 10.0,
-            step=1.0,
-            min_value=0.0,
-            )
-        VAT_RATE_HPA = VAT_RATE_HPA_PERCENT / 100
+        st.markdown("**Please specify below for which revenue streams VAT applies.**")
 
-        VAT_RATE_HSA_PERCENT = st.number_input(
-            'VAT rate on HSA [%]',
-            value = 10.0,
-            step=1.0,
-            min_value=0.0,
-            )
-        VAT_RATE_HSA = VAT_RATE_HSA_PERCENT / 100
-        
-        VAT_RATE_DRI_PERCENT = st.number_input(
-            'VAT rate on DRI [%]',
-            value = 10.0,
-            step=1.0,
-            min_value=0.0,
-            )
-        VAT_RATE_DRI = VAT_RATE_DRI_PERCENT / 100
-        
-        VAT_RATE_FERTILIZER_PERCENT = st.number_input(
-            'VAT rate on fertilizer [%]',
-            value = 10.0,
-            step=1.0,
-            min_value=0.0,
-            )
-        VAT_RATE_FERTILIZER = VAT_RATE_FERTILIZER_PERCENT / 100
-        
-        
-        VAT_RATE_DOMESTIC_PERCENT = st.number_input(
-            'VAT rate on domestic hydrogen product sales [%]',
-            value = 10.0,
-            step=1.0,
-            min_value=0.0,
-            )
-        VAT_RATE_DOMESTIC = VAT_RATE_DOMESTIC_PERCENT / 100
+        VAT_INVEST_BOOL=st.checkbox(label="Investments into machinery and equipment")
+        VAT_HPA_BOOL=st.checkbox(label="Revenue from HPA agreement")
+        VAT_HSA_BOOL=st.checkbox(label="Revenue from HSA agreement")
+        VAT_DRI_BOOL=st.checkbox(label="Revenue from domestic DRI sales")
+        VAT_FERTILIZER_BOOL=st.checkbox(label="Revenue from domestic fertilizer sales")
 
         #Import duties
         IMPORT_DUTIES_RATE_PERCENT = st.number_input(
             'Import duties [%]',
-            value = 10.0,
+            value = 0.0,
             step=1.0,
             min_value=0.0,
             )
@@ -717,13 +684,13 @@ def show_evaluation_page():
                     FERTILIZER_SALES_PRICE=FERTILIZER_SALES_PRICE, #
                     FERTILIZER_PER_KG_NH3=FERTILIZER_PER_KG_NH3, #Fertilizer output per input of NH3
                     SHARE_DOMESTIC_SALES_FERTILIZER=SHARE_DOMESTIC_SALES_FERTILIZER, #How much of the fertilizer is then sold domestically?
-                    VAT_RATE_INVEST=VAT_RATE_INVEST,
                     IMPORT_DUTIES_RATE=IMPORT_DUTIES_RATE,
-                    VAT_RATE_HPA=VAT_RATE_HPA,
-                    VAT_RATE_HSA=VAT_RATE_HSA,
-                    VAT_RATE_DOMESTIC=VAT_RATE_DOMESTIC,
-                    VAT_RATE_DRI=VAT_RATE_DRI,
-                    VAT_RATE_FERTILIZER=VAT_RATE_FERTILIZER
+                    VAT_RATE=VAT_RATE,
+                    VAT_INVEST_BOOL=VAT_INVEST_BOOL,
+                    VAT_HPA_BOOL=VAT_HPA_BOOL,
+                    VAT_HSA_BOOL=VAT_HSA_BOOL,
+                    VAT_DRI_BOOL=VAT_DRI_BOOL,
+                    VAT_FERTILIZER_BOOL=VAT_FERTILIZER_BOOL
                     )
             
             if VIS_5:
@@ -827,13 +794,13 @@ def get_fiscal_npv(
         FERTILIZER_SALES_PRICE, #
         FERTILIZER_PER_KG_NH3, #Fertilizer output per input of NH3
         SHARE_DOMESTIC_SALES_FERTILIZER, #How much of the fertilizer is then sold domestically?
-        VAT_RATE_INVEST,
         IMPORT_DUTIES_RATE,
-        VAT_RATE_HPA,
-        VAT_RATE_HSA,
-        VAT_RATE_DOMESTIC,
-        VAT_RATE_DRI,
-        VAT_RATE_FERTILIZER
+        VAT_RATE,
+        VAT_INVEST_BOOL,
+        VAT_HPA_BOOL,
+        VAT_HSA_BOOL,
+        VAT_DRI_BOOL,
+        VAT_FERTILIZER_BOOL,
         ):
     
     if CONTRACT_PERIOD_HPA > DEPRECIATION_PERIOD:
@@ -864,49 +831,64 @@ def get_fiscal_npv(
         raise AttributeError("Unknown -PRODUCT_TYPE-")
         
     CAPEX = np.max(ANNUAL_PRODUCTION) * CAPEX_PER_KG_ANNUAL_PRODUCTION
-    VAT_INVEST[0] = CAPEX * VAT_RATE_INVEST
+    if VAT_INVEST_BOOL:
+        VAT_INVEST[0] = CAPEX * VAT_RATE
+    else:
+        VAT_INVEST[0] = 0
     
     #____IMPORT_DUTIES_RATE
     IMPORT_DUTIES = np.zeros(DEPRECIATION_PERIOD)
     IMPORT_DUTIES[0] = CAPEX * SHARE_IMPORTED_PRODUCTION_EQUIPMENT * IMPORT_DUTIES_RATE
     
     #____VAT_HPA
-    VAT_HPA = 0 #Assume this to be zero. VAT_RATE_HPA * ANNUAL_PRODUCT_PURCHASES
+    if VAT_HPA_BOOL:
+        VAT_HPA = VAT_RATE * ANNUAL_PRODUCT_PURCHASES
+    else:
+        VAT_HPA = 0
     
     #____VAT_HSA
-    VAT_HSA = 0 #Assume this to be zero. VAT_RATE_HSA * ANNUAL_PRODUCT_SALES
+    if VAT_HSA_BOOL:
+        VAT_HSA = VAT_RATE * ANNUAL_PRODUCT_SALES
+    else:
+        VAT_HSA = 0
         
     TOTAL_DOMESTIC_PRODUCTION = TOTAL_ANNUAL_PRODUCTION * SHARE_DOMESTIC_SALES
     TOTAL_DOMESTIC_PRODUCTION_KG = TOTAL_ANNUAL_PRODUCTION_KG * SHARE_DOMESTIC_SALES
     
     if PRODUCT_TYPE == "Ammonia":
         #____VAT_DOMESTIC. E.g. thermal use of ammonia or other direct end-use.
-        VAT_DOMESTIC = TOTAL_DOMESTIC_PRODUCTION * (1-SHARE_NH3_FERTILIZER_DOMESTIC) * VAT_RATE_DOMESTIC
+        VAT_DOMESTIC = TOTAL_DOMESTIC_PRODUCTION * (1-SHARE_NH3_FERTILIZER_DOMESTIC) * VAT_RATE
         #____VAT_DRI
         VAT_DRI = 0
         #____VAT_FERTILIZER
-        VAT_FERTILIZER = ( 
-            TOTAL_DOMESTIC_PRODUCTION_KG * 
-            SHARE_NH3_FERTILIZER_DOMESTIC * 
-            FERTILIZER_PER_KG_NH3 * 
-            FERTILIZER_SALES_PRICE * 
-            SHARE_DOMESTIC_SALES_FERTILIZER * 
-            VAT_RATE_FERTILIZER
-            )
+        if VAT_FERTILIZER_BOOL:
+            VAT_FERTILIZER = ( 
+                TOTAL_DOMESTIC_PRODUCTION_KG * 
+                SHARE_NH3_FERTILIZER_DOMESTIC * 
+                FERTILIZER_PER_KG_NH3 * 
+                FERTILIZER_SALES_PRICE * 
+                SHARE_DOMESTIC_SALES_FERTILIZER * 
+                VAT_RATE
+                )
+        else:
+            VAT_FERTILIZER = 0
 
     
     elif PRODUCT_TYPE == "Hydrogen":
         #____VAT_DOMESTIC. E.g. thermal use of hydrogen. 
-        VAT_DOMESTIC = TOTAL_DOMESTIC_PRODUCTION * (1-SHARE_H2_DRI_DOMESTIC) * VAT_RATE_DOMESTIC
+        VAT_DOMESTIC = TOTAL_DOMESTIC_PRODUCTION * (1-SHARE_H2_DRI_DOMESTIC) * VAT_RATE
         #____VAT_DRI
-        VAT_DRI = ( 
-            TOTAL_DOMESTIC_PRODUCTION_KG * 
-            SHARE_H2_DRI_DOMESTIC * 
-            DRI_PER_KG_H2 * 
-            DRI_SALES_PRICE * 
-            SHARE_DOMESTIC_SALES_DRI * 
-            VAT_RATE_DRI
-            )
+        if VAT_DRI_BOOL:
+            VAT_DRI = ( 
+                TOTAL_DOMESTIC_PRODUCTION_KG * 
+                SHARE_H2_DRI_DOMESTIC * 
+                DRI_PER_KG_H2 * 
+                DRI_SALES_PRICE * 
+                SHARE_DOMESTIC_SALES_DRI * 
+                VAT_RATE
+                )
+        else:
+            VAT_DRI = 0
         #____VAT_FERTILIZER
         VAT_FERTILIZER = 0
         
@@ -924,7 +906,6 @@ def get_fiscal_npv(
         VAT_DRI +
         VAT_FERTILIZER
         )
-
     
     #Calculate fiscal expenses. (Cashflows to Hintco)
     FISCAL_EXPENSES = ANNUAL_FUNDING_LONG
