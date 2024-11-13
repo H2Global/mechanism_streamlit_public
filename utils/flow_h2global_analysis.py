@@ -175,6 +175,16 @@ def show_evaluation_page():
             )
 
         #Depreciation period of fiscal loan
+        GRACE_PERIOD = st.number_input(
+            'Grace period of the loan [years]',
+            value = 8,
+            step=1,
+            min_value=0,
+            help="During the grace period, no principal payments have to be made."
+            )
+
+
+        #Depreciation period of fiscal loan
         WACC_PERCENT = st.number_input(
             'Cost of Capital [%]',
             value = 2.5,
@@ -214,8 +224,9 @@ def show_evaluation_page():
         VAT_INVEST_BOOL=st.checkbox(label="Investments into machinery and equipment")
         VAT_HPA_BOOL=st.checkbox(label="Revenue from HPA agreement")
         VAT_HSA_BOOL=st.checkbox(label="Revenue from HSA agreement")
-        VAT_DRI_BOOL=st.checkbox(label="Revenue from domestic DRI sales")
-        VAT_FERTILIZER_BOOL=st.checkbox(label="Revenue from domestic fertilizer sales")
+        VAT_HYDROGEN_PRODUCT_BOOL=st.checkbox(label="Revenue from domestic hydrogen product (gaseous hydrogen or ammonia) sales", value=True)
+        VAT_DRI_BOOL=st.checkbox(label="Revenue from domestic DRI sales", value=True)
+        VAT_FERTILIZER_BOOL=st.checkbox(label="Revenue from domestic fertilizer sales", value=True)
 
         #Import duties
         IMPORT_DUTIES_RATE_PERCENT = st.number_input(
@@ -229,9 +240,10 @@ def show_evaluation_page():
         #SHARES
         SHARE_HPA_CONTRACT_PERCENT = st.number_input(
             'Share of the HPA contract of total production [%]',
-            value = 50,
+            value = 75,
             step=1,
             min_value=0,
+            max_value=100
             )
         SHARE_HPA_CONTRACT = SHARE_HPA_CONTRACT_PERCENT/100
         
@@ -240,31 +252,35 @@ def show_evaluation_page():
             value = 50,
             step=1,
             min_value=0,
+            max_value=100
             )
         SHARE_TAXABLE_INCOME = SHARE_TAXABLE_INCOME_PERCENT/100
         
         SHARE_DOMESTIC_SALES_PERCENT = st.number_input(
-            'Share of total product hydrogen product which is sold domestically [%]',
-            value = 80,
+            'Share of total hydrogen product which is sold domestically [%]',
+            value = 100,
             step = 1,
             min_value=0,
+            max_value=100
             )
         SHARE_DOMESTIC_SALES = SHARE_DOMESTIC_SALES_PERCENT/100
 
         SHARE_IMPORTED_PRODUCTION_EQUIPMENT_PERCENT = st.number_input(
             'Share of the production equipment which is imported [%]',
-            value = 80,
+            value = 90,
             step = 1,
             min_value=0,
+            max_value=100,
             help="E.g. electrolyser imported from other country."
             )
         SHARE_IMPORTED_PRODUCTION_EQUIPMENT = SHARE_IMPORTED_PRODUCTION_EQUIPMENT_PERCENT/100
 
         SHARE_H2_DRI_DOMESTIC_PERCENT = st.number_input(
             'Share of hydrogen which is used for the domestic production of DRI [%]',
-            value = 80,
+            value = 50,
             step = 1,
             min_value=0,
+            max_value=100,
             help="only relevant for hydrogen production"
             )
         SHARE_H2_DRI_DOMESTIC = SHARE_H2_DRI_DOMESTIC_PERCENT/100
@@ -295,7 +311,7 @@ def show_evaluation_page():
 
         SHARE_NH3_FERTILIZER_DOMESTIC_PERCENT = st.number_input(
             'Share of ammonia which is used for the domestic production of fertilizer [%]',
-            value = 80,
+            value = 50,
             step = 1,
             min_value=0,
             help="only relevant for ammonia production"
@@ -317,14 +333,14 @@ def show_evaluation_page():
             min_value=0.0,
             )
 
-        SHARE_DOMESTIC_SALES_FERTILIZER = st.number_input(
+        SHARE_DOMESTIC_SALES_FERTILIZER_PERCENT = st.number_input(
             'Share of fertilizer which is sold domestically [%]',
             value = 100,
             step = 1,
             min_value=0,
             help="only relevant for ammonia production"
             )
-        SHARE_DOMESTIC_SALES_DRI = SHARE_DOMESTIC_SALES_DRI_PERCENT/100
+        SHARE_DOMESTIC_SALES_FERTILIZER = SHARE_DOMESTIC_SALES_FERTILIZER_PERCENT/100
         
     
     st.markdown("**Which metrics do you want to visualize?**")
@@ -336,7 +352,7 @@ def show_evaluation_page():
     VIS_3=st.checkbox(label="Mitigated CO2-emissions [tons]")
     VIS_4=st.checkbox(label="Required electrolyzer capacity [GW]")
     VIS_5=st.checkbox(label="Visualize net-present value of fiscal benefits to the state [US$]")
-    VIS_6=st.checkbox(label="Visualize fiscal cashflows [US$]")
+    VIS_6=st.checkbox(label="Visualize absolute fiscal cashflows [US$]")
     
     
     if st.button("Confirm selection"):   
@@ -662,13 +678,15 @@ def show_evaluation_page():
         
         if VIS_5 or VIS_6:
             
-            FISCAL_NPV, FISCAL_CASHFLOWS_DICT = get_fiscal_npv(
+            FISCAL_NPV, FISCAL_CASHFLOWS_DICT, LOAN_CASHFLOWS_DICT, SALES_REVENUES_DICT = get_fiscal_npv(
                     PRODUCT_TYPE=Derivative,
+                    TOTAL_LOAN=Subsidy_Volume,
                     ANNUAL_PRODUCTION=data_to_plot["Hydrogen Purchases [kg]"], #kg
                     ANNUAL_PRODUCT_PURCHASES=data_to_plot["Hydrogen Purchases [$]"], #USD
                     ANNUAL_PRODUCT_SALES=data_to_plot["Annual Sales [$]"], #USD
                     ANNUAL_FUNDING=data_to_plot["Used Funding Volume [$]"], #USD   
                     DEPRECIATION_PERIOD=DEPRECIATION_PERIOD, #YEARS
+                    GRACE_PERIOD=GRACE_PERIOD,
                     CONTRACT_PERIOD_HPA=Period,
                     WACC=WACC,
                     CORPORATE_TAX_RATE=CORPORATE_TAX_RATE,
@@ -689,96 +707,129 @@ def show_evaluation_page():
                     VAT_INVEST_BOOL=VAT_INVEST_BOOL,
                     VAT_HPA_BOOL=VAT_HPA_BOOL,
                     VAT_HSA_BOOL=VAT_HSA_BOOL,
+                    VAT_HYDROGEN_PRODUCT_BOOL=VAT_HYDROGEN_PRODUCT_BOOL,
                     VAT_DRI_BOOL=VAT_DRI_BOOL,
                     VAT_FERTILIZER_BOOL=VAT_FERTILIZER_BOOL
                     )
             
-            if VIS_5:
-                # Convert dictionary to lists for Plotly
+            if VIS_5:                                
+
+                # Convert dictionary to calculate total depreciated cashflows for each category
                 categories = list(FISCAL_CASHFLOWS_DICT.keys())
+                FISCAL_CASHFLOWS_TOTAL_DEPRECIATED = {}
                 
-                FISCAL_CASHFLOWS_DICT_DEPRECIATED = {}
                 for c in categories:
-                    CASHFLOW_DEPRECIATED_TEMP = 0
+                    CASHFLOW_DEPRECIATED_TOTAL = 0
                     FISCAL_CASHFLOWS_TEMP = FISCAL_CASHFLOWS_DICT[c]
+                    
+                    # If the value is a scalar, add it directly; otherwise, depreciate it over the specified period and sum
                     if isinstance(FISCAL_CASHFLOWS_TEMP, (int, float)):
-                        FISCAL_CASHFLOWS_DICT_DEPRECIATED[c] = FISCAL_CASHFLOWS_TEMP
-                        continue
+                        FISCAL_CASHFLOWS_TOTAL_DEPRECIATED[c] = FISCAL_CASHFLOWS_TEMP
                     else:
                         for t in range(DEPRECIATION_PERIOD):
-                            CASHFLOW_DEPRECIATED_TEMP += FISCAL_CASHFLOWS_TEMP[t] / (1+WACC)**t
-    
-                    FISCAL_CASHFLOWS_DICT_DEPRECIATED[c] = CASHFLOW_DEPRECIATED_TEMP
+                            CASHFLOW_DEPRECIATED_TOTAL += FISCAL_CASHFLOWS_TEMP[t] / (1 + WACC) ** t
+                        FISCAL_CASHFLOWS_TOTAL_DEPRECIATED[c] = CASHFLOW_DEPRECIATED_TOTAL
                 
-                #Extract keys and values from dict for visualization
-                categories_vis = list(FISCAL_CASHFLOWS_DICT_DEPRECIATED.keys())
-                values_vis = list(FISCAL_CASHFLOWS_DICT_DEPRECIATED.values())
+                # Prepare data for Plotly as a single stacked bar
+                data = [{'Category': category, 'Total Depreciated Cashflow': value} 
+                        for category, value in FISCAL_CASHFLOWS_TOTAL_DEPRECIATED.items()]
                 
-                # Create a Plotly Express bar chart
+                # Create a DataFrame for visualization
+                df = pd.DataFrame(data)
+                
+                # Add a dummy column for y-axis to create a single stacked bar
+                df['Stacked Bar'] = 'Total Depreciated Cashflow'
+                
+                # Create a single stacked bar chart
                 fig5 = px.bar(
-                    x=categories_vis,
-                    y=values_vis,
-                    labels={'y': 'Cashflow [US$]'},
-                    title="Depreciated Cashflow [US$]",
-                    text=values_vis  # Display float values on bars
+                    df,
+                    x="Stacked Bar",  # Single stacked bar label
+                    y="Total Depreciated Cashflow",
+                    color="Category",
+                    labels={'Total Depreciated Cashflow': 'Total Depreciated Cashflow [US$]', 'Stacked Bar': ''},
+                    title="Total Depreciated Cashflow for All Categories [US$]",
                 )
                 
-                # Customize the bar chart
-                fig5.update_traces(texttemplate='%{text:.2f}', textposition='outside')  # Format text to 2 decimals
-                fig5.update_layout(yaxis=dict(title="Values"), xaxis=dict(title="Categories"))
+                # Customize the chart
+                fig5.update_layout(
+                    xaxis=dict(showticklabels=False),  # Hide x-axis tick label
+                    yaxis=dict(
+                        title="Total Depreciated Cashflow [US$]",
+                        zeroline=True,          # Show a zero line on the y-axis
+                        zerolinecolor="black",   # Set the color of the zero line
+                        zerolinewidth=1.5        # Set the thickness of the zero line
+                    ),
+                    showlegend=True  # Show legend for categories
+                )
                 
                 # Display the chart in Streamlit
-                st.plotly_chart(fig5)         
+                st.plotly_chart(fig5)
                 
+                # Display NPV calculation
                 st.write(
                     "Net-present value of funding instrument for fiscal authority:", 
-                    round(FISCAL_NPV*1e-6, 2), 
+                    round(FISCAL_NPV * 1e-6, 2), 
                     "[Million US$]"
-                    )
-    
+                )
+                    
             if VIS_6:
                 
-                fig6 = go.Figure()
+                # Combine fiscal and loan cashflows into a DataFrame for each year
+                years = list(range(1, DEPRECIATION_PERIOD + 1))  # Define years as labels
+                data = {"Year": years}
                 
-                #Plot hydrogen purchases
-                data_to_plot_long = pd.DataFrame(
-                    {
-                       "Year": range(1,DEPRECIATION_PERIOD+1)
-                       }
-                    )
-                                
-                categories = list(FISCAL_CASHFLOWS_DICT.keys())
-                for c in categories:
-                    #Adding data
-                    data_to_plot_long[c] = FISCAL_CASHFLOWS_DICT[c]                    
+                # Add fiscal cashflows to data dictionary
+                for key, values in FISCAL_CASHFLOWS_DICT.items():
+                    if key == "FISCAL_EXPENSES":
+                        continue
+                    else:
+                        data[key] = values
                 
-                    #Add bar for Hydrogen Purchases from Funding with error bars
-                    fig6.add_trace(go.Bar(
-                        x=data_to_plot_long['Year'],
-                        y=data_to_plot_long[c],
-                        name=c
-                        )
-                    )
-        
-                # Update layout to stack bars
-                fig6.update_layout(
-                    title="Absolute fiscal cashflows [US$]",
-                    barmode='stack',  # Stack bars
-                    xaxis_title='Year',
-                    yaxis_title="Cashflow [US$]",
+                # Add loan cashflows to data dictionary
+                for key, values in LOAN_CASHFLOWS_DICT.items():
+                    data[key] = values
+                
+                # Convert data dictionary to a DataFrame
+                df = pd.DataFrame(data)
+                
+                # Melt DataFrame for Plotly to create stacked bars
+                df_melted = df.melt(id_vars=["Year"], var_name="Category", value_name="Cashflow")
+                
+                # Create a stacked bar chart in Plotly
+                fig6 = px.bar(
+                    df_melted,
+                    x="Year",
+                    y="Cashflow",
+                    color="Category",
+                    title="Yearly Cashflows by Category [US$]",
+                    labels={"Cashflow": "Cashflow [US$]", "Year": "Year"},
                 )
                 
-                # Render the Plotly chart in Streamlit
-                st.plotly_chart(fig6, use_container_width=True)
-               
+                # Customize the chart
+                fig6.update_layout(
+                    yaxis=dict(title="Cashflow [US$]", zeroline=True, zerolinecolor="black", zerolinewidth=1.5),
+                    showlegend=True
+                )
+                
+                # Display the chart in Streamlit
+                st.plotly_chart(fig6)
+            
+                #Output of sales revenues
+                TOTAL_DOMESTIC_REVENUES = SALES_REVENUES_DICT["DOMESTIC_SALES_REVENUE"].sum()
+                st.write("Total domestic sales revenue (hydrogen product, fertilizer, DRI) [USD Mio.]:", round(TOTAL_DOMESTIC_REVENUES*1e-6, 1))
+                TOTAL_EXPORT_REVENUES = SALES_REVENUES_DICT["EXPORT_SALES_REVENUE"].sum()
+                st.write("Total export sales revenue (hydrogen product, fertilizer, DRI) [USD Mio.]:", round(TOTAL_EXPORT_REVENUES*1e-6, 1))
+
             
 def get_fiscal_npv(
         PRODUCT_TYPE,
+        TOTAL_LOAN,
         ANNUAL_PRODUCTION, #kg
         ANNUAL_PRODUCT_PURCHASES, #USD
         ANNUAL_PRODUCT_SALES, #USD
         ANNUAL_FUNDING, #USD
         DEPRECIATION_PERIOD, #YEARS
+        GRACE_PERIOD, #YEARS
         CONTRACT_PERIOD_HPA, #years
         WACC,
         CORPORATE_TAX_RATE,
@@ -799,6 +850,7 @@ def get_fiscal_npv(
         VAT_INVEST_BOOL,
         VAT_HPA_BOOL,
         VAT_HSA_BOOL,
+        VAT_HYDROGEN_PRODUCT_BOOL,
         VAT_DRI_BOOL,
         VAT_FERTILIZER_BOOL,
         ):
@@ -820,6 +872,8 @@ def get_fiscal_npv(
     TOTAL_ANNUAL_PRODUCTION_KG = ANNUAL_PRODUCTION / SHARE_HPA_CONTRACT
     TAXABLE_INCOME = TOTAL_ANNUAL_PRODUCTION * SHARE_TAXABLE_INCOME
     CORPORATE_TAX = TAXABLE_INCOME * CORPORATE_TAX_RATE
+    DOMESTIC_SALES_REVENUE = 0
+    EXPORT_SALES_REVENUE = 0
     
     #____VAT_RATE_INVEST: Includes the VAT on initial investments on the supply side.
     VAT_INVEST = np.zeros(DEPRECIATION_PERIOD)
@@ -853,21 +907,42 @@ def get_fiscal_npv(
         VAT_HSA = 0
         
     TOTAL_DOMESTIC_PRODUCTION = TOTAL_ANNUAL_PRODUCTION * SHARE_DOMESTIC_SALES
+    TOTAL_EXPORT_PRODUCTION = TOTAL_ANNUAL_PRODUCTION * (1-SHARE_DOMESTIC_SALES)
     TOTAL_DOMESTIC_PRODUCTION_KG = TOTAL_ANNUAL_PRODUCTION_KG * SHARE_DOMESTIC_SALES
     
     if PRODUCT_TYPE == "Ammonia":
         #____VAT_DOMESTIC. E.g. thermal use of ammonia or other direct end-use.
-        VAT_DOMESTIC = TOTAL_DOMESTIC_PRODUCTION * (1-SHARE_NH3_FERTILIZER_DOMESTIC) * VAT_RATE
+        if VAT_HYDROGEN_PRODUCT_BOOL:
+            DOMESTIC_SALES_REVENUE_PRODUCT = TOTAL_DOMESTIC_PRODUCTION * (1-SHARE_NH3_FERTILIZER_DOMESTIC)
+            DOMESTIC_SALES_REVENUE += DOMESTIC_SALES_REVENUE_PRODUCT
+            EXPORT_SALES_REVENUE_PRODUCT = TOTAL_EXPORT_PRODUCTION
+            EXPORT_SALES_REVENUE += EXPORT_SALES_REVENUE_PRODUCT
+            
+            VAT_DOMESTIC = DOMESTIC_SALES_REVENUE_PRODUCT * VAT_RATE
+        else:
+            VAT_DOMESTIC = 0
         #____VAT_DRI
         VAT_DRI = 0
         #____VAT_FERTILIZER
         if VAT_FERTILIZER_BOOL:
-            VAT_FERTILIZER = ( 
+            DOMESTIC_SALES_REVENUE_FERTILIZER = (
                 TOTAL_DOMESTIC_PRODUCTION_KG * 
                 SHARE_NH3_FERTILIZER_DOMESTIC * 
                 FERTILIZER_PER_KG_NH3 * 
                 FERTILIZER_SALES_PRICE * 
-                SHARE_DOMESTIC_SALES_FERTILIZER * 
+                SHARE_DOMESTIC_SALES_FERTILIZER)
+            DOMESTIC_SALES_REVENUE += DOMESTIC_SALES_REVENUE_FERTILIZER
+            
+            EXPORT_SALES_REVENUE_FERTILIZER = (
+                TOTAL_DOMESTIC_PRODUCTION_KG * 
+                SHARE_NH3_FERTILIZER_DOMESTIC * 
+                FERTILIZER_PER_KG_NH3 * 
+                FERTILIZER_SALES_PRICE * 
+                (1-SHARE_DOMESTIC_SALES_FERTILIZER))
+            EXPORT_SALES_REVENUE += EXPORT_SALES_REVENUE_FERTILIZER
+            
+            VAT_FERTILIZER = (
+                DOMESTIC_SALES_REVENUE_FERTILIZER * 
                 VAT_RATE
                 )
         else:
@@ -876,15 +951,36 @@ def get_fiscal_npv(
     
     elif PRODUCT_TYPE == "Hydrogen":
         #____VAT_DOMESTIC. E.g. thermal use of hydrogen. 
-        VAT_DOMESTIC = TOTAL_DOMESTIC_PRODUCTION * (1-SHARE_H2_DRI_DOMESTIC) * VAT_RATE
+        if VAT_HYDROGEN_PRODUCT_BOOL:
+            DOMESTIC_SALES_REVENUE_PRODUCT = TOTAL_DOMESTIC_PRODUCTION * (1-SHARE_H2_DRI_DOMESTIC)
+            DOMESTIC_SALES_REVENUE += DOMESTIC_SALES_REVENUE_PRODUCT
+            EXPORT_SALES_REVENUE_PRODUCT = TOTAL_EXPORT_PRODUCTION
+            EXPORT_SALES_REVENUE += EXPORT_SALES_REVENUE_PRODUCT
+            
+            VAT_DOMESTIC = DOMESTIC_SALES_REVENUE_PRODUCT * VAT_RATE
+        else:
+            VAT_DOMESTIC = 0
         #____VAT_DRI
         if VAT_DRI_BOOL:
-            VAT_DRI = ( 
+            DOMESTIC_SALES_REVENUE_DRI = ( 
                 TOTAL_DOMESTIC_PRODUCTION_KG * 
                 SHARE_H2_DRI_DOMESTIC * 
                 DRI_PER_KG_H2 * 
                 DRI_SALES_PRICE * 
-                SHARE_DOMESTIC_SALES_DRI * 
+                SHARE_DOMESTIC_SALES_DRI
+                )
+            DOMESTIC_SALES_REVENUE += DOMESTIC_SALES_REVENUE_DRI
+                        
+            EXPORT_SALES_REVENUE_DRI = (
+                TOTAL_DOMESTIC_PRODUCTION_KG * 
+                SHARE_H2_DRI_DOMESTIC * 
+                DRI_PER_KG_H2 * 
+                DRI_SALES_PRICE * 
+                (1-SHARE_DOMESTIC_SALES_DRI))
+            EXPORT_SALES_REVENUE += EXPORT_SALES_REVENUE_DRI
+            
+            VAT_DRI = (
+                DOMESTIC_SALES_REVENUE_DRI *
                 VAT_RATE
                 )
         else:
@@ -928,9 +1024,31 @@ def get_fiscal_npv(
         "IMPORT_DUTIES": IMPORT_DUTIES,
         "VAT_HPA": VAT_HPA, 
         "VAT_HSA": VAT_HSA,
-        "VAT_DOMESTIC": VAT_DOMESTIC,
+        "VAT_H2_PRODUCT": VAT_DOMESTIC,
         "VAT_DRI": VAT_DRI,
         "VAT_FERTILIZER": VAT_FERTILIZER
         }
 
-    return NPV, FISCAL_CASHFLOWS_DICT
+    #calculate loan payments
+    interest_payments = np.array([TOTAL_LOAN*WACC for t in range(DEPRECIATION_PERIOD)])
+    
+    if GRACE_PERIOD == 0:
+        annual_principal = TOTAL_LOAN / DEPRECIATION_PERIOD
+        principal_payments = np.array([annual_principal for t in range(DEPRECIATION_PERIOD)])
+    else:
+        annual_principal = TOTAL_LOAN / (DEPRECIATION_PERIOD-GRACE_PERIOD)
+        principal_payments_I = np.array([0 for t in range(GRACE_PERIOD)])
+        principal_payments_II = np.array([annual_principal for t in range(GRACE_PERIOD, DEPRECIATION_PERIOD)])
+        principal_payments = np.concatenate((principal_payments_I, principal_payments_II), axis=0)
+
+    LOAN_CASHFLOWS_DICT = {
+        "INTEREST_PAYMENTS" : -interest_payments,
+        "PRINCIPAL_PAYMENTS" : -principal_payments
+        }
+
+    SALES_REVENUES_DICT = {
+        "DOMESTIC_SALES_REVENUE" : DOMESTIC_SALES_REVENUE,
+        "EXPORT_SALES_REVENUE" : EXPORT_SALES_REVENUE
+        }
+
+    return NPV, FISCAL_CASHFLOWS_DICT, LOAN_CASHFLOWS_DICT, SALES_REVENUES_DICT
