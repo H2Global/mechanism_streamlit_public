@@ -309,6 +309,12 @@ def show_evaluation_page():
                 )
             SHARE_DOMESTIC_SALES_DRI = SHARE_DOMESTIC_SALES_DRI_PERCENT/100
 
+            #DEFINE FOR FUNCTIONALITY
+            SHARE_NH3_FERTILIZER_DOMESTIC = 0
+            FERTILIZER_SALES_PRICE = 0
+            FERTILIZER_PER_KG_NH3 = 2
+            SHARE_DOMESTIC_SALES_FERTILIZER = 0
+
         if Derivative == "Ammonia":
 
             SHARE_NH3_FERTILIZER_DOMESTIC_PERCENT = st.number_input(
@@ -341,6 +347,13 @@ def show_evaluation_page():
                 min_value=0,
                 )
             SHARE_DOMESTIC_SALES_FERTILIZER = SHARE_DOMESTIC_SALES_FERTILIZER_PERCENT/100
+        
+            #DEFINE FOR FUNCTIONALITY
+            SHARE_H2_DRI_DOMESTIC = 0
+            DRI_SALES_PRICE = 0
+            DRI_PER_KG_H2 = 20
+            SHARE_DOMESTIC_SALES_FERTILIZER = 0
+            SHARE_DOMESTIC_SALES_DRI = 0
         
     
     st.markdown("**Which metrics do you want to visualize?**")
