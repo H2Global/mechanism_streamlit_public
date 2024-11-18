@@ -226,7 +226,7 @@ def show_evaluation_page():
         VAT_HSA_BOOL=st.checkbox(label="Revenue from HSA agreement")
         VAT_HYDROGEN_PRODUCT_BOOL=st.checkbox(label="Revenue from domestic hydrogen product (gaseous hydrogen or ammonia) sales", value=True)
         VAT_DRI_BOOL=st.checkbox(label="Revenue from domestic DRI sales", value=True)
-        VAT_FERTILIZER_BOOL=st.checkbox(label="Revenue from domestic fertilizer sales", value=True)
+        VAT_FERTILIZER_BOOL=st.checkbox(label="Revenue from domestic fertilizer sales")
 
         #Import duties
         IMPORT_DUTIES_RATE_PERCENT = st.number_input(
@@ -240,7 +240,7 @@ def show_evaluation_page():
         #SHARES
         SHARE_HPA_CONTRACT_PERCENT = st.number_input(
             'Share of the HPA contract of total production [%]',
-            value = 75,
+            value = 20,
             step=1,
             min_value=0,
             max_value=100
@@ -258,7 +258,7 @@ def show_evaluation_page():
         
         SHARE_DOMESTIC_SALES_PERCENT = st.number_input(
             'Share of total hydrogen product which is sold domestically [%]',
-            value = 100,
+            value = 50,
             step = 1,
             min_value=0,
             max_value=100
@@ -274,73 +274,73 @@ def show_evaluation_page():
             help="E.g. electrolyser imported from other country."
             )
         SHARE_IMPORTED_PRODUCTION_EQUIPMENT = SHARE_IMPORTED_PRODUCTION_EQUIPMENT_PERCENT/100
+        
+        if Derivative == "Hydrogen":
+        
+            SHARE_H2_DRI_DOMESTIC_PERCENT = st.number_input(
+                'Share of hydrogen which is used for the domestic production of DRI [%]',
+                value = 50,
+                step = 1,
+                min_value=0,
+                max_value=100,
+                )
+            SHARE_H2_DRI_DOMESTIC = SHARE_H2_DRI_DOMESTIC_PERCENT/100
 
-        SHARE_H2_DRI_DOMESTIC_PERCENT = st.number_input(
-            'Share of hydrogen which is used for the domestic production of DRI [%]',
-            value = 50,
-            step = 1,
-            min_value=0,
-            max_value=100,
-            help="only relevant for hydrogen production"
-            )
-        SHARE_H2_DRI_DOMESTIC = SHARE_H2_DRI_DOMESTIC_PERCENT/100
+            DRI_SALES_PRICE_PER_TON = st.number_input(
+                'Domestic sales price of DRI [USD/ton]',
+                value = 300,
+                step = 10,
+                min_value=0,
+                )
+            DRI_SALES_PRICE = DRI_SALES_PRICE_PER_TON/1000
+    
+            DRI_PER_KG_H2 = st.number_input(
+                'DRI production per consumed hydrogen [kg-DRI/kg-H2]',
+                value = 20,
+                step = 1,
+                min_value=0,
+                )
+    
+            SHARE_DOMESTIC_SALES_DRI_PERCENT = st.number_input(
+                'Share of DRI which is sold domestically [%]',
+                value = 100,
+                step = 1,
+                min_value=0,
+                )
+            SHARE_DOMESTIC_SALES_DRI = SHARE_DOMESTIC_SALES_DRI_PERCENT/100
 
-        DRI_SALES_PRICE_PER_TON = st.number_input(
-            'Domestic sales price of DRI [USD/ton]',
-            value = 300,
-            step = 10,
-            min_value=0,
-            )
-        DRI_SALES_PRICE = DRI_SALES_PRICE_PER_TON/1000
+        if Derivative == "Hydrogen":
 
-        DRI_PER_KG_H2 = st.number_input(
-            'DRI production per consumed hydrogen [kg-DRI/kg-H2]',
-            value = 20,
-            step = 1,
-            min_value=0,
-            )
-
-        SHARE_DOMESTIC_SALES_DRI_PERCENT = st.number_input(
-            'Share of DRI which is sold domestically [%]',
-            value = 100,
-            step = 1,
-            min_value=0,
-            help="only relevant for hydrogen production"
-            )
-        SHARE_DOMESTIC_SALES_DRI = SHARE_DOMESTIC_SALES_DRI_PERCENT/100
-
-        SHARE_NH3_FERTILIZER_DOMESTIC_PERCENT = st.number_input(
-            'Share of ammonia which is used for the domestic production of fertilizer [%]',
-            value = 50,
-            step = 1,
-            min_value=0,
-            help="only relevant for ammonia production"
-            )
-        SHARE_NH3_FERTILIZER_DOMESTIC = SHARE_NH3_FERTILIZER_DOMESTIC_PERCENT/100
-
-        FERTILIZER_SALES_PRICE_PER_TON = st.number_input(
-            'Domestic sales price of ammonia-based fertilizer [USD/ton]',
-            value = 500,
-            step = 10,
-            min_value=0,
-            )
-        FERTILIZER_SALES_PRICE = FERTILIZER_SALES_PRICE_PER_TON/1000
-
-        FERTILIZER_PER_KG_NH3 = st.number_input(
-            'Fertilizer (urea) production per consumed ammonia [kg-fertilizer/kg-NH3]',
-            value = 2.0,
-            step = 0.1,
-            min_value=0.0,
-            )
-
-        SHARE_DOMESTIC_SALES_FERTILIZER_PERCENT = st.number_input(
-            'Share of fertilizer which is sold domestically [%]',
-            value = 100,
-            step = 1,
-            min_value=0,
-            help="only relevant for ammonia production"
-            )
-        SHARE_DOMESTIC_SALES_FERTILIZER = SHARE_DOMESTIC_SALES_FERTILIZER_PERCENT/100
+            SHARE_NH3_FERTILIZER_DOMESTIC_PERCENT = st.number_input(
+                'Share of ammonia which is used for the domestic production of fertilizer [%]',
+                value = 50,
+                step = 1,
+                min_value=0,
+                )
+            SHARE_NH3_FERTILIZER_DOMESTIC = SHARE_NH3_FERTILIZER_DOMESTIC_PERCENT/100
+    
+            FERTILIZER_SALES_PRICE_PER_TON = st.number_input(
+                'Domestic sales price of ammonia-based fertilizer [USD/ton]',
+                value = 500,
+                step = 10,
+                min_value=0,
+                )
+            FERTILIZER_SALES_PRICE = FERTILIZER_SALES_PRICE_PER_TON/1000
+    
+            FERTILIZER_PER_KG_NH3 = st.number_input(
+                'Fertilizer (urea) production per consumed ammonia [kg-fertilizer/kg-NH3]',
+                value = 2.0,
+                step = 0.1,
+                min_value=0.0,
+                )
+    
+            SHARE_DOMESTIC_SALES_FERTILIZER_PERCENT = st.number_input(
+                'Share of fertilizer which is sold domestically [%]',
+                value = 100,
+                step = 1,
+                min_value=0,
+                )
+            SHARE_DOMESTIC_SALES_FERTILIZER = SHARE_DOMESTIC_SALES_FERTILIZER_PERCENT/100
         
     
     st.markdown("**Which metrics do you want to visualize?**")
