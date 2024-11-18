@@ -824,8 +824,6 @@ def show_evaluation_page():
                     showlegend=True
                 )
                 
-                fig6.write_image("high_res_plot.png", width=1200, height=800, scale=2)  # Scale enhances resolution
-                st.image("high_res_plot.png")
                 
                 # Display the chart in Streamlit
                 st.plotly_chart(fig6)
