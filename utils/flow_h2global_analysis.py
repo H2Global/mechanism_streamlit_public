@@ -352,7 +352,6 @@ def show_evaluation_page():
             SHARE_H2_DRI_DOMESTIC = 0
             DRI_SALES_PRICE = 0
             DRI_PER_KG_H2 = 20
-            SHARE_DOMESTIC_SALES_FERTILIZER = 0
             SHARE_DOMESTIC_SALES_DRI = 0
         
     
