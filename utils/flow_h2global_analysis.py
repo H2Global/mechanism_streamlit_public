@@ -309,7 +309,7 @@ def show_evaluation_page():
                 )
             SHARE_DOMESTIC_SALES_DRI = SHARE_DOMESTIC_SALES_DRI_PERCENT/100
 
-        if Derivative == "Hydrogen":
+        if Derivative == "Ammonia":
 
             SHARE_NH3_FERTILIZER_DOMESTIC_PERCENT = st.number_input(
                 'Share of ammonia which is used for the domestic production of fertilizer [%]',
