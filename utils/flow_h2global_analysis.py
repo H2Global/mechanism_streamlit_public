@@ -824,6 +824,9 @@ def show_evaluation_page():
                     showlegend=True
                 )
                 
+                fig6.write_image("high_res_plot.png", width=1200, height=800, scale=2)  # Scale enhances resolution
+                st.image("high_res_plot.png")
+                
                 # Display the chart in Streamlit
                 st.plotly_chart(fig6)
             
@@ -919,8 +922,8 @@ def get_fiscal_npv(
     else:
         VAT_HSA = 0
         
-    TOTAL_DOMESTIC_PRODUCTION = TOTAL_ANNUAL_PRODUCTION * SHARE_DOMESTIC_SALES
-    TOTAL_EXPORT_PRODUCTION = TOTAL_ANNUAL_PRODUCTION * (1-SHARE_DOMESTIC_SALES)
+    TOTAL_DOMESTIC_PRODUCTION = ANNUAL_PRODUCT_SALES * SHARE_DOMESTIC_SALES
+    TOTAL_EXPORT_PRODUCTION = ANNUAL_PRODUCT_SALES * (1-SHARE_DOMESTIC_SALES)
     TOTAL_DOMESTIC_PRODUCTION_KG = TOTAL_ANNUAL_PRODUCTION_KG * SHARE_DOMESTIC_SALES
     
     if PRODUCT_TYPE == "Ammonia":
