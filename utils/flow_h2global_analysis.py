@@ -875,15 +875,17 @@ def get_fiscal_npv(
         
         #resize external input arrays.
         ANNUAL_PRODUCTION = np.concatenate([ANNUAL_PRODUCTION, np.full(delta_years, ANNUAL_PRODUCTION.iloc[-1])]) #kg
-        ANNUAL_PRODUCT_PURCHASES = np.concatenate([ANNUAL_PRODUCT_PURCHASES, np.full(delta_years, ANNUAL_PRODUCT_PURCHASES.iloc[-1])]) #USD
-        ANNUAL_PRODUCT_SALES = np.concatenate([ANNUAL_PRODUCT_SALES, np.zeros(delta_years)]) #USD
+        ANNUAL_PRODUCT_PURCHASES_HINTCO = np.concatenate([ANNUAL_PRODUCT_PURCHASES, np.zeros(delta_years)]) #USD
+        ANNUAL_PRODUCT_PURCHASES_TOTAL = np.concatenate([ANNUAL_PRODUCT_PURCHASES, np.full(delta_years, ANNUAL_PRODUCT_PURCHASES.iloc[-1])]) #USD
+        ANNUAL_PRODUCT_SALES_HINTCO = np.concatenate([ANNUAL_PRODUCT_SALES, np.zeros(delta_years)]) #USD
+        ANNUAL_PRODUCT_SALES_TOTAL = np.concatenate([ANNUAL_PRODUCT_SALES, np.full(delta_years, ANNUAL_PRODUCT_SALES.iloc[-1])]) #USD
         ANNUAL_FUNDING_LONG = np.concatenate([ANNUAL_FUNDING, np.zeros(delta_years)]) #USD
         
     #Calculate fiscal benefits. (tax revenues)
     #____CORPORATE_TAX: Only include supply side, because these will be genuinely new businesses.
-    TOTAL_ANNUAL_PRODUCTION = ANNUAL_PRODUCT_PURCHASES / SHARE_HPA_CONTRACT
+    TOTAL_ANNUAL_PRODUCTION = ANNUAL_PRODUCT_PURCHASES_TOTAL / SHARE_HPA_CONTRACT
     TOTAL_ANNUAL_PRODUCTION_KG = ANNUAL_PRODUCTION / SHARE_HPA_CONTRACT
-    TOTAL_ANNUAL_PRODUCT_SALES = ANNUAL_PRODUCT_SALES / SHARE_HPA_CONTRACT
+    TOTAL_ANNUAL_PRODUCT_SALES = ANNUAL_PRODUCT_SALES_TOTAL / SHARE_HPA_CONTRACT
     TAXABLE_INCOME = TOTAL_ANNUAL_PRODUCTION * SHARE_TAXABLE_INCOME
     CORPORATE_TAX = TAXABLE_INCOME * CORPORATE_TAX_RATE
     DOMESTIC_SALES_REVENUE = 0
@@ -910,13 +912,13 @@ def get_fiscal_npv(
     
     #____VAT_HPA
     if VAT_HPA_BOOL:
-        VAT_HPA = VAT_RATE * ANNUAL_PRODUCT_PURCHASES
+        VAT_HPA = VAT_RATE * ANNUAL_PRODUCT_PURCHASES_HINTCO
     else:
         VAT_HPA = 0
     
     #____VAT_HSA
     if VAT_HSA_BOOL:
-        VAT_HSA = VAT_RATE * ANNUAL_PRODUCT_SALES
+        VAT_HSA = VAT_RATE * ANNUAL_PRODUCT_SALES_HINTCO
     else:
         VAT_HSA = 0
         
@@ -925,9 +927,6 @@ def get_fiscal_npv(
     TOTAL_DOMESTIC_PRODUCTION_KG = TOTAL_ANNUAL_PRODUCTION_KG * SHARE_DOMESTIC_SALES
     
     if PRODUCT_TYPE == "Ammonia":
-        st.write("TOTAL_DOMESTIC_PRODUCTION [USD]", TOTAL_DOMESTIC_PRODUCTION)
-        st.write("TOTAL_DOMESTIC_PRODUCTION_KG [kg]", TOTAL_DOMESTIC_PRODUCTION_KG)
-        st.write("TOTAL_DOMESTIC_PRODUCTION - DERIVED [USD]", TOTAL_DOMESTIC_PRODUCTION*0.5)
         
         #____VAT_DOMESTIC. E.g. thermal use of ammonia or other direct end-use.
         DOMESTIC_SALES_REVENUE_PRODUCT = TOTAL_DOMESTIC_PRODUCTION * (1-SHARE_NH3_FERTILIZER_DOMESTIC)
