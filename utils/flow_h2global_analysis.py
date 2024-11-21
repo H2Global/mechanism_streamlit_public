@@ -67,30 +67,47 @@ def show_evaluation_page():
         min_value=0
         )
     
+    if Derivative == "Hydrogen":
+        Purchase_Price_Start_DEFAULT = 6.0
+        Purchase_Price_End_DEFAULT = 6.0
+        Sales_Price_Start_DEFAULT = 3.0
+        Sales_Price_End_DEFAULT = 4.5
+    elif Derivative == "Ammonia":
+        Purchase_Price_Start_DEFAULT = 1.0
+        Purchase_Price_End_DEFAULT = 1.0
+        Sales_Price_Start_DEFAULT = 0.5
+        Sales_Price_End_DEFAULT = 0.65
+    else:
+        Purchase_Price_Start_DEFAULT = 6.0
+        Purchase_Price_End_DEFAULT = 6.0
+        Sales_Price_Start_DEFAULT = 3.0
+        Sales_Price_End_DEFAULT = 4.5
+
+
     Purchase_Price_Start = st.number_input(
         'Purchase price start [US$/kg]',
-        value = 6.0,
+        value = Purchase_Price_Start_DEFAULT,
         step=0.1,
         min_value=0.0,
         help="""The purchase price includes transport costs from the production site to the agreed demand location."""
         )
     Purchase_Price_End = st.number_input(
         'Purchase price end [US$/kg]',
-        value = 6.0,
+        value = Purchase_Price_End_DEFAULT,
         step=0.1,
         min_value=0.0,
         help="""The purchase price includes transport costs from the production site to the agreed demand location."""
         )
     Sales_Price_Start = st.number_input(
         'Sales price start [US$/kg]',
-        value = 3.0,
+        value = Sales_Price_Start_DEFAULT,
         step=0.1,
         min_value=0.0
         )
 
     Sales_Price_End = st.number_input(
         'Sales price end [US$/kg]',
-        value = 4.5,
+        value = Sales_Price_End_DEFAULT,
         step=0.1,
         min_value=0.0
         )
@@ -188,10 +205,19 @@ def show_evaluation_page():
         WACC_PERCENT = st.number_input(
             'Cost of Capital [%]',
             value = 2.5,
-            step=1.0,
+            step=0.1,
             min_value=0.0,
             )
         WACC = WACC_PERCENT/100
+
+        #Depreciation period of fiscal loan
+        INFLATION_PERCENT = st.number_input(
+            'Inflation [%]',
+            value = 3.0,
+            step=0.1,
+            min_value=0.0,
+            )
+        INFLATION = INFLATION_PERCENT/100
 
         #Income tax
         #____Only consider corporate tax on revenue of production projects.
@@ -224,9 +250,13 @@ def show_evaluation_page():
         VAT_INVEST_BOOL=st.checkbox(label="Investments into machinery and equipment")
         VAT_HPA_BOOL=st.checkbox(label="Revenue from HPA agreement")
         VAT_HSA_BOOL=st.checkbox(label="Revenue from HSA agreement")
-        VAT_HYDROGEN_PRODUCT_BOOL=st.checkbox(label="Revenue from domestic hydrogen product (gaseous hydrogen or ammonia) sales", value=True)
-        VAT_DRI_BOOL=st.checkbox(label="Revenue from domestic DRI sales", value=True)
-        VAT_FERTILIZER_BOOL=st.checkbox(label="Revenue from domestic fertilizer sales")
+        VAT_HYDROGEN_PRODUCT_BOOL=st.checkbox(label="Revenue from domestic hydrogen product (gaseous hydrogen or ammonia) sales")        
+        if Derivative == "Hydrogen":
+            VAT_DRI_BOOL=st.checkbox(label="Revenue from domestic DRI sales")
+            VAT_FERTILIZER_BOOL = False
+        if Derivative == "Ammonia":
+            VAT_FERTILIZER_BOOL=st.checkbox(label="Revenue from domestic fertilizer sales")
+            VAT_DRI_BOOL = False
 
         #Import duties
         IMPORT_DUTIES_RATE_PERCENT = st.number_input(
@@ -237,6 +267,17 @@ def show_evaluation_page():
             )
         IMPORT_DUTIES_RATE = IMPORT_DUTIES_RATE_PERCENT / 100
 
+        SHARE_IMPORTED_PRODUCTION_EQUIPMENT_PERCENT = st.number_input(
+            'Share of the production equipment which is imported [%]',
+            value = 90,
+            step = 1,
+            min_value=0,
+            max_value=100,
+            help="E.g. electrolyser imported from other country."
+            )
+        SHARE_IMPORTED_PRODUCTION_EQUIPMENT = SHARE_IMPORTED_PRODUCTION_EQUIPMENT_PERCENT/100
+
+
         #SHARES
         SHARE_HPA_CONTRACT_PERCENT = st.number_input(
             'Share of the HPA contract of total production [%]',
@@ -245,7 +286,24 @@ def show_evaluation_page():
             min_value=0,
             max_value=100
             )
-        SHARE_HPA_CONTRACT = SHARE_HPA_CONTRACT_PERCENT/100
+        SHARE_HPA_CONTRACT_SINGLE = SHARE_HPA_CONTRACT_PERCENT/100
+        
+        RAMP_UP = st.number_input(
+            'Ramp up period for production project [years]',
+            value = 3,
+            step=1,
+            min_value=0,
+            max_value=Period,
+            help="During this period, the share of the HPA contract of the total production of the project decreases linearly from 1 to the indicated share."
+            )
+        
+        if RAMP_UP > 0:
+            DELTA_YEARS_RAMP_UP = DEPRECIATION_PERIOD - RAMP_UP
+            SHARE_HPA_CONTRACT_RAMP_UP = np.linspace(1,SHARE_HPA_CONTRACT_SINGLE,RAMP_UP)
+            SHARE_HPA_CONTRACT_AFTER_RAMP_UP = np.linspace(SHARE_HPA_CONTRACT_SINGLE,SHARE_HPA_CONTRACT_SINGLE,DELTA_YEARS_RAMP_UP)
+            SHARE_HPA_CONTRACT = np.concatenate((SHARE_HPA_CONTRACT_RAMP_UP, SHARE_HPA_CONTRACT_AFTER_RAMP_UP))
+        else:
+            SHARE_HPA_CONTRACT = np.linspace(SHARE_HPA_CONTRACT_SINGLE,SHARE_HPA_CONTRACT_SINGLE,DEPRECIATION_PERIOD)
         
         SHARE_TAXABLE_INCOME_PERCENT = st.number_input(
             'Share of taxable income of total revenue of the production project [%]',
@@ -264,19 +322,8 @@ def show_evaluation_page():
             max_value=100
             )
         SHARE_DOMESTIC_SALES = SHARE_DOMESTIC_SALES_PERCENT/100
-
-        SHARE_IMPORTED_PRODUCTION_EQUIPMENT_PERCENT = st.number_input(
-            'Share of the production equipment which is imported [%]',
-            value = 90,
-            step = 1,
-            min_value=0,
-            max_value=100,
-            help="E.g. electrolyser imported from other country."
-            )
-        SHARE_IMPORTED_PRODUCTION_EQUIPMENT = SHARE_IMPORTED_PRODUCTION_EQUIPMENT_PERCENT/100
         
         if Derivative == "Hydrogen":
-        
             SHARE_H2_DRI_DOMESTIC_PERCENT = st.number_input(
                 'Share of hydrogen which is used for the domestic production of DRI [%]',
                 value = 50,
@@ -308,7 +355,7 @@ def show_evaluation_page():
                 min_value=0,
                 )
             SHARE_DOMESTIC_SALES_DRI = SHARE_DOMESTIC_SALES_DRI_PERCENT/100
-
+        
             #DEFINE FOR FUNCTIONALITY
             SHARE_NH3_FERTILIZER_DOMESTIC = 0
             FERTILIZER_SALES_PRICE = 0
@@ -347,7 +394,7 @@ def show_evaluation_page():
                 min_value=0,
                 )
             SHARE_DOMESTIC_SALES_FERTILIZER = SHARE_DOMESTIC_SALES_FERTILIZER_PERCENT/100
-        
+                
             #DEFINE FOR FUNCTIONALITY
             SHARE_H2_DRI_DOMESTIC = 0
             DRI_SALES_PRICE = 0
@@ -701,6 +748,7 @@ def show_evaluation_page():
                     GRACE_PERIOD=GRACE_PERIOD,
                     CONTRACT_PERIOD_HPA=Period,
                     WACC=WACC,
+                    INFLATION=INFLATION,
                     CORPORATE_TAX_RATE=CORPORATE_TAX_RATE,
                     SHARE_HPA_CONTRACT=SHARE_HPA_CONTRACT, #This is the share that the HPA contract takes of the companies total revenue.
                     SHARE_TAXABLE_INCOME=SHARE_TAXABLE_INCOME, #This is the share of the taxable income of the total revenue of the supply side company.
@@ -845,6 +893,7 @@ def get_fiscal_npv(
         GRACE_PERIOD, #YEARS
         CONTRACT_PERIOD_HPA, #years
         WACC,
+        INFLATION,
         CORPORATE_TAX_RATE,
         SHARE_HPA_CONTRACT, #This is the share that the HPA contract takes of the companies total revenue.
         SHARE_TAXABLE_INCOME, #This is the share of the taxable income of the total revenue of the supply side company.
@@ -871,14 +920,28 @@ def get_fiscal_npv(
     if CONTRACT_PERIOD_HPA > DEPRECIATION_PERIOD:
         raise ValueError("Depreciation period of loan is shorter than HPA contract period.")
     else:
-        delta_years = DEPRECIATION_PERIOD - CONTRACT_PERIOD_HPA
+        if DEPRECIATION_PERIOD >= CONTRACT_PERIOD_HPA:
+            delta_years = DEPRECIATION_PERIOD - CONTRACT_PERIOD_HPA
+        else:
+            raise ValueError("Loan period must be equal to or larger than contract period.")
         
         #resize external input arrays.
+        #____This is the annual production volume under the HPA contract in kg
         ANNUAL_PRODUCTION = np.concatenate([ANNUAL_PRODUCTION, np.full(delta_years, ANNUAL_PRODUCTION.iloc[-1])]) #kg
+        #____These are the annual product purchases by Hintco
         ANNUAL_PRODUCT_PURCHASES_HINTCO = np.concatenate([ANNUAL_PRODUCT_PURCHASES, np.zeros(delta_years)]) #USD
-        ANNUAL_PRODUCT_PURCHASES_TOTAL = np.concatenate([ANNUAL_PRODUCT_PURCHASES, np.full(delta_years, ANNUAL_PRODUCT_PURCHASES.iloc[-1])]) #USD
+        #____This is for how much producers can sell to the market, after the offtake contract expired.
+        #____Conservative assumption: Last Hintco sales price*inflation
+        ANNUAL_PRODUCT_SALES_AFTER_HINTCO = np.array([ANNUAL_PRODUCT_SALES.iloc[-1]*(1+INFLATION)**t for t in range(delta_years)])
+        #____These are the annual product purchases by Hintco, extended by a future offtake --> Used for calculating the revenue of the production projects.
+        #____Assume the last Hintco sales price here and increase this by inflation.
+        ANNUAL_PRODUCT_PURCHASES_TOTAL = np.concatenate([ANNUAL_PRODUCT_PURCHASES, ANNUAL_PRODUCT_SALES_AFTER_HINTCO]) #USD
+        #____These are the sales via hintco within the contract period.
         ANNUAL_PRODUCT_SALES_HINTCO = np.concatenate([ANNUAL_PRODUCT_SALES, np.zeros(delta_years)]) #USD
-        ANNUAL_PRODUCT_SALES_TOTAL = np.concatenate([ANNUAL_PRODUCT_SALES, np.full(delta_years, ANNUAL_PRODUCT_SALES.iloc[-1])]) #USD
+        #____These are the sales by Hintco, extended by future offtake. --> Used for domestic and export volume calculations.
+        #____Assume the last Hintco sales price here and increase this by inflation.
+        ANNUAL_PRODUCT_SALES_TOTAL = np.concatenate([ANNUAL_PRODUCT_SALES, ANNUAL_PRODUCT_SALES_AFTER_HINTCO]) #USD
+        #____This is the required funding for Hintco.
         ANNUAL_FUNDING_LONG = np.concatenate([ANNUAL_FUNDING, np.zeros(delta_years)]) #USD
         
     #Calculate fiscal benefits. (tax revenues)
@@ -886,7 +949,7 @@ def get_fiscal_npv(
     TOTAL_ANNUAL_PRODUCTION = ANNUAL_PRODUCT_PURCHASES_TOTAL / SHARE_HPA_CONTRACT
     TOTAL_ANNUAL_PRODUCTION_KG = ANNUAL_PRODUCTION / SHARE_HPA_CONTRACT
     TOTAL_ANNUAL_PRODUCT_SALES = ANNUAL_PRODUCT_SALES_TOTAL / SHARE_HPA_CONTRACT
-    TAXABLE_INCOME = TOTAL_ANNUAL_PRODUCTION * SHARE_TAXABLE_INCOME
+    TAXABLE_INCOME = (SHARE_HPA_CONTRACT*TOTAL_ANNUAL_PRODUCTION + (1-SHARE_HPA_CONTRACT)*TOTAL_ANNUAL_PRODUCT_SALES)*SHARE_TAXABLE_INCOME
     CORPORATE_TAX = TAXABLE_INCOME * CORPORATE_TAX_RATE
     DOMESTIC_SALES_REVENUE = 0
     EXPORT_SALES_REVENUE = 0
@@ -925,8 +988,6 @@ def get_fiscal_npv(
     TOTAL_DOMESTIC_PRODUCTION = TOTAL_ANNUAL_PRODUCT_SALES * SHARE_DOMESTIC_SALES
     TOTAL_EXPORT_PRODUCTION = TOTAL_ANNUAL_PRODUCT_SALES * (1-SHARE_DOMESTIC_SALES)
     TOTAL_DOMESTIC_PRODUCTION_KG = TOTAL_ANNUAL_PRODUCTION_KG * SHARE_DOMESTIC_SALES
-
-    st.write("TOTAL_DOMESTIC_PRODUCTION_KG: ", TOTAL_DOMESTIC_PRODUCTION_KG)
     
     if PRODUCT_TYPE == "Ammonia":
         
